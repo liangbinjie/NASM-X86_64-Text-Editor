@@ -81,12 +81,6 @@ _noArg:
     pop rdi
     call closeFile                  ; cerramos el archivo
 
-    ; prints
-    mov rsi,nombreArchivo
-    call WriteString
-    mov rsi,editando
-    call WriteString
-
     mov rsi,buffer
     call CountLines
     inc rax
@@ -128,16 +122,12 @@ ReadLine:
     ; rsi: buffer
     ReadLine.while:
         push rsi
+        push rsi
         call strLen2
 
         mov rdx,rax
         pop rsi
-        push rsi
         call printStr
-
-        pop rdi
-        mov sil,0ah
-        call strchr
 
         pop rdi
         mov sil,0ah
@@ -151,13 +141,16 @@ ReadLine:
         mov rdx,1
         syscall
 
-        cmp byte[input],"n"
+        cmp byte[input],0ah
+        pop rsi
         je ReadLine.nextLine
         jmp ReadLine.end
 
     ReadLine.nextLine:
-        pop rsi
-        call WriteString
+        jmp ReadLine.while
+
+    ReadLine.reset:
+        mov rsi,buffer
         jmp ReadLine.while
 
     ReadLine.end:
