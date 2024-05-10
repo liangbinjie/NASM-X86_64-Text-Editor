@@ -65,7 +65,7 @@ _noArg:
     ; vamos a abrir el archivo
     mov rdi,nombreArchivo           ; rdi recibe el nombre de archivo
     mov rdx,400o                    ; user has read permission
-    mov rsi, 001o                   ; flag lectura
+    mov rsi,100o                    ; flag o mode?
     call openFile                   ; llamamos a openFile
     push rax                        ; guardamos el fd
     cmp rax,1                       ; vemos si nos
@@ -91,11 +91,8 @@ _noArg:
     inc rax
     mov [lineas],rax
     
-    mov rax,buffer
+    mov rsi,buffer
     call ReadLine
-
-    
-    
     
     jmp _end
 
@@ -127,39 +124,17 @@ _openError:
 
 ; ****************** F U N C T I O N S ************************
 ReadLine:
-    ; rax: buffer
-    xor r10,r10
+    ; rsi: buffer
     ReadLine.while:
-        cmp r10,[lineas]        ; comparamos si llegamos a la ultima linea
-        je ReadLine.reset       ; si es asi, reseteamos rax
-        
-        mov rsi,rax             ; rsi recibe el puntero
-        push rsi                ; guardamos el puntero
-        call strLen2            ; contamos el largo de la linea
+        push rsi
+        call strLen2
 
-        mov rdx,rax             ; rdx recibe el largo de la linea
-        pop rsi                 ; rsi recibe el puntero
-        push rsi                ; lo guarda en la pila para uso posterior
-        call printStr           ; imprime 
-
-        mov rsi,input           ; enter o guardamos
-        mov rax,0               ; sys read
-        mov rdx,1               ; un caracter
-        syscall                 ; call
- 
-        cmp byte[input],"n"     ; si es enter, pasamos al siguiente
-        jne ReadLine.end
-
-        pop rsi                 ; sacamos rsi
-        mov sil,0ah             ; obtenemos el siguiente puntero
-        call strchr
-        inc rax
-
-        jmp ReadLine.while
-
-    ReadLine.reset: 
-        mov rax,buffer          ; reseteamos rax, para que empiece otra vez
-        jmp ReadLine.while
+        mov rdx,rax
+        inc rdx
+        pop rsi
+        mov rdi,1
+        mov rax,1
+        syscall
 
     ReadLine.end:
         ret
