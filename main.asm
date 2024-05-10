@@ -123,11 +123,21 @@ ReadLine:
     ReadLine.while:
         push rsi
         push rsi
-        call strLen2
 
-        mov rdx,rax
-        pop rsi
+        call strLen2
+        push rax                ; guardamos la cantidad de caracteres
+
+        ; limpiamos el screen
+        call ClearScreen
+        mov rsi,nombreArchivo
+        call WriteString
+        mov rsi,editando
+        call WriteString
+
+        pop rdx                 ; sacamos la cantidad de caracteres
+        pop rsi                 ; sacamos el puntero
         call printStr
+        
 
         pop rdi
         mov sil,0ah
@@ -147,10 +157,7 @@ ReadLine:
         jmp ReadLine.end
 
     ReadLine.nextLine:
-        jmp ReadLine.while
-
-    ReadLine.reset:
-        mov rsi,buffer
+        ; prints
         jmp ReadLine.while
 
     ReadLine.end:
