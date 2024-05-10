@@ -4,16 +4,16 @@ section .data
     ingresarArchivoMsg db "Ingrese el nombre del archivo: ",0
     opcionInvalidaMsg db "Funcion invalida, utilice --help para obtener ayuda",0ah,0
     helpMsg db 0ah,"Manual de ayuda",0ah
-            db "----------------------------------------------------------------",0ah
-            db "--help             > Mostrar manual de ayuda",0ah
-            db "-r <nombreArchivo> > Leer un archivo",0ah
-            db "-h <nombreArchivo> > Lee un archivo en hexadecimal",0ah,0
+            db "----------------------------------------------------------------------------------------",0ah
+            db "--help                               > Mostrar manual de ayuda",0ah
+            db "-r <nombreArchivo>                   > Leer un archivo",0ah
+            db "-h <nombreArchivo>                   > Lee un archivo en hexadecimal",0ah,
+            db "-d <nombreArchivo1> <nombreArchivo2> > Muestra la diferencia entre dos archivos",0ah,0
     errorArchivoMsg db "Error al abrir archivo",0ah,0
     editando db " | Archivo que se esta editando>",0ah,0
     lineaActual db "Linea actual: ",0
     lineNumber db 0
     lineas db 0
-    hola db "hola",0
 
 
 section .bss
@@ -138,7 +138,6 @@ ReadLine:
         pop rsi                 ; sacamos el puntero
         call printStr
         
-
         pop rdi
         mov sil,0ah
         call strchr
