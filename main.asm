@@ -20,7 +20,8 @@ section .bss
     nombreArchivo resb 100  ; maximo 100 bytes de nombre
     buffer resb 4096       ; maximo 4096 bytes de archivo
     input resb 1
-    num resb 21
+    anterior resb 4096
+    despeus resb 4096
     
 
 section .text
@@ -88,6 +89,9 @@ _noArg:
     
     mov rsi,buffer
     call ReadLine
+
+    mov rsi,anterior
+    call WriteString
     
     jmp _end
 
@@ -121,10 +125,10 @@ _openError:
 ReadLine:
     ; rsi: buffer
     ReadLine.while:
-        push rsi
-        push rsi
+        push rsi                ; guardamos el buffer
+        push rsi                ; guardamos el buffer
 
-        call strLen2
+        call strLen2            ; obtenemos el puntero del primer 0ah que se encuentre
         push rax                ; guardamos la cantidad de caracteres
 
         ; limpiamos el screen
@@ -136,15 +140,16 @@ ReadLine:
 
         pop rdx                 ; sacamos la cantidad de caracteres
         pop rsi                 ; sacamos el puntero
-        call printStr
+        call printStr           ; imprimimos la linea
         
-        pop rdi
-        mov sil,0ah
-        call strchr
-        inc rax
-        push rax
+        pop rdi                 ; sacamos el puntero de la linea actual
+        mov r10,rdi
+        mov sil,0ah             ; buscamos el siguiente
+        call strchr             ; salto de linea
+        inc rax                 ; aumentamos el puntero a uno
+        push rax                ; guardamos el nuevo puntero en la pila
 
-        mov rsi,input
+        mov rsi,input           ; preguntamos al usuario que quiere hacer
         mov rdi,0
         mov rax,0
         mov rdx,1
@@ -153,14 +158,38 @@ ReadLine:
         cmp byte[input],0ah
         pop rsi
         je ReadLine.nextLine
+        cmp byte[input],"e"
+        je ReadLine.editLine
         jmp ReadLine.end
 
     ReadLine.nextLine:
         ; prints
         jmp ReadLine.while
 
+    ReadLine.editLine:
+        mov rsi,buffer
+        call GuardarAnterior
+        ret
+
     ReadLine.end:
         ret
+
+GuardarAnterior:
+    ; rsi: buffer
+    ; r10: condicion de parada
+    xor rdx,rdx
+    GuardarAnterior.while:
+        cmp rsi,r10
+        je GuardarAnterior.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[anterior+rdx],bl
+        inc rsi
+        inc rdx
+        jmp GuardarAnterior.while
+    GuardarAnterior.end:
+        ret
+
 
 CountLines:
 ; cuenta cuantas lineas (0ah) tiene
@@ -179,7 +208,6 @@ CountLines:
     CountLines.end:
         mov rax,rcx
         ret
-
 
 
 section .data
