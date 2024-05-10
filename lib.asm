@@ -140,9 +140,9 @@ strLen2:
     xor rcx,rcx                 ; rcx funciona como el contador e indice
 strLen2.sig:
     cmp byte [rsi + rcx],0ah      ; por cada byte, compara si ya llego al final
-    jz strLen.fin               ; si es asi, termina el programa
+    je strLen2.fin               ; si es asi, termina el programa
     inc rcx                     ; si no, incrementa el contador
-    jmp strLen.sig              ; y nos devolvemos de nuevo al ciclo
+    jmp strLen2.sig              ; y nos devolvemos de nuevo al ciclo
 strLen2.fin:
     mov rax,rcx                 ; al final le metemos el len a rax
     ret

@@ -20,6 +20,7 @@ section .bss
     nombreArchivo resb 100  ; maximo 100 bytes de nombre
     buffer resb 4096       ; maximo 4096 bytes de archivo
     input resb 1
+    num resb 21
     
 
 section .text
@@ -130,11 +131,8 @@ ReadLine:
         call strLen2
 
         mov rdx,rax
-        inc rdx
         pop rsi
-        mov rdi,1
-        mov rax,1
-        syscall
+        call printStr
 
     ReadLine.end:
         ret
