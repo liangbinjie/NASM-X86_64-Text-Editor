@@ -132,7 +132,33 @@ ReadLine:
 
         mov rdx,rax
         pop rsi
+        push rsi
         call printStr
+
+        pop rdi
+        mov sil,0ah
+        call strchr
+
+        pop rdi
+        mov sil,0ah
+        call strchr
+        inc rax
+        push rax
+
+        mov rsi,input
+        mov rdi,0
+        mov rax,0
+        mov rdx,1
+        syscall
+
+        cmp byte[input],"n"
+        je ReadLine.nextLine
+        jmp ReadLine.end
+
+    ReadLine.nextLine:
+        pop rsi
+        call WriteString
+        jmp ReadLine.while
 
     ReadLine.end:
         ret
