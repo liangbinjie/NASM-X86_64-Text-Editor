@@ -65,6 +65,7 @@ _noArg:
     ; vamos a abrir el archivo
     mov rdi,nombreArchivo           ; rdi recibe el nombre de archivo
     mov rdx,400o                    ; user has read permission
+    mov rsi, 001o                   ; flag lectura
     call openFile                   ; llamamos a openFile
     push rax                        ; guardamos el fd
     cmp rax,1                       ; vemos si nos
