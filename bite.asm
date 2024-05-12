@@ -4,6 +4,9 @@ section .data
 section .bss
     file resb 100
     buffer resb 4096
+    anterior resb 4096
+    despues resb 4096
+    overwrite resb 4096
     input resb 1
 
 section .text
@@ -46,7 +49,6 @@ _noArg:
     push rsi
 
 ReadLine:
-    ReadLine.while:
     call clearScreen
     call printArchivo
     pop rsi                         ; obtiene el puntero
@@ -60,7 +62,7 @@ ReadLine:
 
     pop rsi                         ; sacamos el puntero
     call strchr                     ; obtenemos el siguiente puntero/linea
-    push rax
+    push rax                        ; lo guardamos en la pila
     
     mov rsi,input
     mov rdx,1
@@ -68,14 +70,18 @@ ReadLine:
     mov rax,0
     syscall
 
+    cmp byte[input],"e"
+    je ReadLine.edit
+
     cmp byte[input],0ah
     jne ReadLine.end 
+
 
     cmp r12,[lineas]
     je ReadLine.reset
     inc r12
 
-    jmp ReadLine.while
+    jmp ReadLine
 
     ReadLine.reset:
         pop rsi
@@ -84,7 +90,18 @@ ReadLine:
         xor r12,r12
         jmp ReadLine
 
+    ReadLine.edit:
+        pop rsi
+        call guardarDespues
+        call guardarAnterior
+        jmp ReadLine.end
+
     ReadLine.end:
+        mov rsi,despues
+        call writeString
+        mov rsi,anterior
+        call writeString
+        
 
     jmp _end
 
@@ -279,6 +296,53 @@ printArchivo:
     mov rsi,enter0ah
     call writeString
     ret
+
+guardarDespues:
+    ; rsi: puntero
+    push rbp
+    xor rcx,rcx
+    guardarDespues.while:
+        cmp byte[rsi],0
+        je guardarDespues.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[despues+rcx],bl
+        inc rcx
+        inc rsi
+        jmp guardarDespues.while
+    guardarDespues.end:
+        mov rax,rcx
+        pop rbp
+        ret
+        
+guardarAnterior:
+    ; r12 : receives number of lines
+    push r12
+    dec r12
+    xor rcx,rcx
+    mov rsi,buffer
+    xor rdx,rdx
+    guardarAnterior.while:
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[anterior+rdx],bl
+        inc rdx
+
+        cmp byte[rsi],0ah
+        je guardarAnterior.cmp
+        inc rsi
+        jmp guardarAnterior.while
+    guardarAnterior.cmp:
+        cmp rcx,r12
+        je guardarAnterior.end
+        inc rcx
+        inc rsi
+        jmp guardarAnterior.while
+    guardarAnterior.end:
+        pop r12
+        ret
+
+
 
 section .rodata
     archivoMsg db "Linea actual del rchivo que se esta editando > ",0
