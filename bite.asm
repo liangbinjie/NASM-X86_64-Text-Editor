@@ -13,7 +13,7 @@ section .text
     global _start
 
 _start:
-    pop rax             ; obtiene cantidad de argumentos
+    pop rax                         ; obtiene cantidad de argumentos
     
     cmp rax,1
     je _noArg
@@ -31,22 +31,23 @@ _end:
 
 ; ****************************************************************
 _noArg:
-    mov rsi,file
-    mov rdx,99
-    call readInput
+    mov rsi,file                    ; leemos el nombre
+    mov rdx,99                      ; del archivo
+    call readInput                  ; maximo 99 caracteres
     
     mov rsi,file
-    call delReturn          ; delete file 0ah
+    call delReturn                  ; delete file 0ah
 
-    call openFile
+_openFile:
+    call openFile                   
     ; hasta aqui el archivo se abre en modo lectura y guarda todo lo del archivo en el buffer
     
-    mov rsi,buffer          ; contamos
-    call countLines         ; cuantas lineas
-    mov [lineas],rax        ; tiene el archivo
+    mov rsi,buffer                  ; contamos
+    call countLines                 ; cuantas lineas
+    mov [lineas],rax                ; tiene el archivo
 
-    mov rsi,buffer
-    push rsi
+    mov rsi,buffer                  ; guardamos el puntero
+    push rsi                        ; del buffer en la pila
 
 ReadLine:
     call clearScreen
@@ -64,7 +65,7 @@ ReadLine:
     call strchr                     ; obtenemos el siguiente puntero/linea
     push rax                        ; lo guardamos en la pila
     
-    mov rsi,input
+    mov rsi,input                   ; vemos que desea hacer el usuario
     mov rdx,1
     mov rdi,0
     mov rax,0
@@ -73,8 +74,8 @@ ReadLine:
     cmp byte[input],"e"
     je ReadLine.edit
 
-    cmp byte[input],0ah
-    jne ReadLine.end 
+    cmp byte[input],"q"
+    je ReadLine.end 
 
 
     cmp r12,[lineas]
@@ -83,27 +84,34 @@ ReadLine:
 
     jmp ReadLine
 
-    ReadLine.reset:
+    ReadLine.reset:                 ; si llego al final de lineas, vuelva al inicio
         pop rsi
         mov rsi,buffer
         push rsi
         xor r12,r12
         jmp ReadLine
 
-    ReadLine.edit:
-        pop rsi
-        call guardarDespues
-        call guardarAnterior
-        jmp ReadLine.end
+    ReadLine.edit:                  ; si es para editar
+        pop rsi                     ; sacamos la direccion del puntero que habiamos guardado
+        call guardarDespues         ; primero guardamos lo que hay despues de la linea seleccionada
+        call guardarAnterior        ; luego guardamos lo anterior a la linea
+        mov rsi,overwrite           ; !!! AQUI le preguntamos al usuario que desea poner en la linea !!!
+        mov rax,0
+        mov rdi,0
+        mov rdx,4095
+        syscall
 
-    ReadLine.end:
-        mov rsi,despues
-        call writeString
-        mov rsi,anterior
-        call writeString
+        ; agregar codigo para abrir archivo y escribir lo nuevo
+
+        jmp _openFile               ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
         
 
-    jmp _end
+    ReadLine.end:
+        mov rsi,anterior            ; imprime lo anterior
+        call writeString
+        mov rsi,despues             ; imprime lo despues
+        call writeString
+        jmp _end
 
 _oneArg:
 
@@ -345,7 +353,7 @@ guardarAnterior:
 
 
 section .rodata
-    archivoMsg db "Linea actual del rchivo que se esta editando > ",0
+    archivoMsg db "Linea actual del archivo que se esta editando > ",0
     enter0ah db 0ah,0
     clearTerm db 27,"[H",27,"[2J"
     clearLen equ $ - clearTerm
