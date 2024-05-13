@@ -29,8 +29,8 @@ _end:
 
 ; ****************************************************************
 _noArg:
-    mov rsi,fileInput
-    call writeString
+    mov rsi,fileInput               ; imprimos mensaje
+    call writeString                ; para que ingrese nombre archivo
 
     mov rsi,file                    ; leemos el nombre
     mov rdx,99                      ; del archivo
@@ -40,13 +40,13 @@ _noArg:
     call delReturn                  ; delete file 0ah
 
 _openFile:
-    xor r12,r12
-    mov rsi,buffer
-    call cleanBuffer
-    mov rsi,text
-    call cleanBuffer
+    xor r12,r12                     ; limpiamos la linea actual
+    mov rsi,buffer                  ; limpiamos
+    call cleanBuffer                ; el buffer
+    mov rsi,text                    ; limpiamos el
+    call cleanBuffer                ; buffer de text
 
-    call openFile                   
+    call openFile                   ; abrimos el archivo
     ; hasta aqui el archivo se abre en modo lectura y guarda todo lo del archivo en el buffer
     
     mov rsi,buffer                  ; contamos
@@ -57,9 +57,8 @@ _openFile:
     push rsi                        ; del buffer en la pila
 
 ReadLine:
-    call clearScreen
-
-    call printArchivo
+    call clearScreen                ; limpiamos la pantalla
+    call printArchivo               ; imprimos msg de cual archivo estamos trabajando
     pop rsi                         ; obtiene el puntero
     push rsi                        ; guarda el puntero
     call strLen0ah                  ; obtiene la cantidad de caracteres de la linea
@@ -84,28 +83,28 @@ ReadLine:
     call readInput                  ; que se va a editar
     
     mov rsi,input                   ; vemos que desea hacer el usuario
-    mov rdx,1
-    call readInput
+    mov rdx,1                       ; si guardar
+    call readInput                  ; o salir
 
-    cmp byte[input],"s"
+    cmp byte[input],"s"             ; "s" para guardar
     je ReadLine.save
-
-    cmp byte[input],0ah
+    
+    cmp byte[input],0ah             ; diferente a "0ah" para salir
     jne ReadLine.end 
 
 
-    cmp r12,[lineas]
-    je ReadLine.reset
-    inc r12
+    cmp r12,[lineas]                ; comparamos si llegamos al final de
+    je ReadLine.reset               ; lineas, para resetear el contador
+    inc r12                         ; si no, aumentamos la linea actual
 
-    jmp ReadLine
+    jmp ReadLine                    ; regresamos a readLine si no hay reset
 
     ReadLine.reset:                 ; si llego al final de lineas, vuelva al inicio
-        pop rsi
-        mov rsi,buffer
-        push rsi
-        xor r12,r12
-        jmp ReadLine
+        pop rsi                     ; saco el puntero que habia guardado
+        mov rsi,buffer              ; le pongo de nuevo el puntero de buffer
+        push rsi                    ; lo guardo en la pila
+        xor r12,r12                 ; limpio linea actual
+        jmp ReadLine                ; volvemos a readLine
 
     ReadLine.save:                  ; editamos el archivo
 
@@ -120,15 +119,9 @@ ReadLine:
         call guardarAnterior        ; luego guardamos lo anterior a la linea
         call fwrite                 ; guardamos lo nuevo al archivo
 
-        mov rsi,text
-        call writeString
-
         jmp _openFile                ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
               
     ReadLine.end:
-        mov rsi,buffer              
-        call writeString
-
         jmp _end
 
 _oneArg:
@@ -139,15 +132,15 @@ _oneArg:
     cmp rax,1               ; si es igual
     je _displayHelp         ; mostramos el mensaje de ayuda
 
-    mov rsi,readPrefix
-    call cmpStr
-    cmp rax,1
-    je _displayFile
+    mov rsi,readPrefix      ; si es para leer
+    call cmpStr             
+    cmp rax,1   
+    je _displayFile         ; imprimos el contenido
 
-    mov rsi,editPrefix
-    call cmpStr
+    mov rsi,editPrefix      ; si es para editar
+    call cmpStr             
     cmp rax,1
-    je _editFile
+    je _editFile            ; solo vamos de vuelta
 
     jmp _invalidPrefix
 
@@ -317,7 +310,7 @@ fopen:
     push rbp
     mov rax,2
     mov rsi,400o
-    mov rdx,100o
+    mov rdx,102o
     syscall
     pop rbp
     ret
@@ -429,6 +422,7 @@ openFile:
     ret
 
 printArchivo:
+    ; Imprime un mensaje de en cual archivo esta trabajando el usuario
     mov rsi, archivoMsg
     call writeString
     mov rsi,file
