@@ -20,10 +20,7 @@ _start:
     je _noArg
 
     cmp rax,2
-    je _oneArg
-
-    cmp rax,3
-    je _function
+    jge _oneArg
 
 _end:
     mov rax,60
@@ -135,12 +132,50 @@ ReadLine:
         jmp _end
 
 _oneArg:
+    pop rax                 ; obtiene el nombre del programa
+    pop rdi                 ; obtiene el prefijo
+    mov rsi,helpPrefix      ; rsi recibe el prefijo de sistema
+    call cmpStr             ; comparamos si es igual a "-H"
+    cmp rax,1               ; si es igual
+    je _displayHelp         ; mostramos el mensaje de ayuda
 
+    mov rsi,readPrefix
+    call cmpStr
+    cmp rax,1
+    je _displayFile
+
+    jmp _invalidPrefix
+
+_displayFile:
+    pop rsi
+    push rsi
+    call strLen
+
+    mov rdx,rax
+    pop rsi
+    call readFileName
+
+    call openFile
+
+    call clearScreen
+    
+    mov rsi,buffer
+    call writeString
+    jmp _end
+
+_displayHelp:
+    mov rsi,helpMsg
+    call writeString
+    jmp _end
+
+_invalidPrefix:
+    ; imprime que el prefijo es invalido y cierra el programa
+    mov rsi,opcionInvalidaMsg
+    call writeString
     jmp _end
 
 _function:
     jmp _end
-
 
 ; ************* FUNCTIONS ****************
 cleanBuffer:
@@ -448,9 +483,52 @@ guardarAnterior:
         pop r12
         ret
 
+cmpStr:
+    xor rcx,rcx
+    xor rbx,rbx
+    cmpStr.while:
+        cmp rcx,2           
+        je cmpStr.endEqual
+        mov bl,byte[rdi+rcx]
+        cmp byte[rsi+rcx],bl
+        jne cmpStr.endNotEqual
+        inc rcx
+        jmp cmpStr.while
+    cmpStr.endEqual:
+        mov rax,1
+        ret
+    cmpStr.endNotEqual:
+        mov rax,0
+        ret
+
+readFileName:
+    ; rsi: fileName
+    ; rdx: filename length
+    xor rcx,rcx
+    readFileName.while:
+        cmp rcx,rdx
+        je readFileName.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[file+rcx],bl
+        inc rcx
+        inc rsi
+        jmp readFileName.while
+    readFileName.end:
+        ret
+
 
 
 section .rodata
+    opcionInvalidaMsg db "Funcion invalida, utilice --help para obtener ayuda",0ah,0
+    helpMsg db 0ah,"Manual de ayuda",0ah
+            db "----------------------------------------------------------------------------------------",0ah
+            db "--help                               > Muestra el manual de ayuda",0ah
+            db "-r <nombreArchivo>                   > Lee un archivo",0ah
+            db "-e <nombreArchivo>                   > Edita un archivo",0ah
+            db "-h <nombreArchivo>                   > Lee un archivo en hexadecimal",0ah,
+            db "-d <nombreArchivo1> <nombreArchivo2> > Muestra la diferencia entre dos archivos",0ah,0
+    errorArchivoMsg db "Error al abrir archivo",0ah,0
     fileInput db "Ingrese el nombre de archivo: ",0
     editarLinea db 0ah,"Editar linea: ",0
     archivoMsg db "Linea actual del archivo que se esta editando > ",0
@@ -458,4 +536,7 @@ section .rodata
     clearTerm db 27,"[H",27,"[2J"
     clearLen equ $ - clearTerm
     helpPrefix db "--help",0
+    readPrefix db "-r",0
+    editPrefix db "-e",0
     hexPrefix db "-h",0
+    diffPrefix db "-d",0
