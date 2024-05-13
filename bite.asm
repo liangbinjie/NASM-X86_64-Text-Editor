@@ -40,6 +40,14 @@ _noArg:
     call delReturn                  ; delete file 0ah
 
 _openFile:
+    mov rsi,buffer
+    call cleanBuffer
+    mov rsi,despues
+    call cleanBuffer
+    mov rsi,anterior
+    call cleanBuffer
+    mov rsi,overwrite
+    call cleanBuffer
     call openFile                   
     ; hasta aqui el archivo se abre en modo lectura y guarda todo lo del archivo en el buffer
     
@@ -51,7 +59,7 @@ _openFile:
     push rsi                        ; del buffer en la pila
 
 ReadLine:
-    ; call clearScreen
+    call clearScreen
     call printArchivo
     pop rsi                         ; obtiene el puntero
     push rsi                        ; guarda el puntero
@@ -128,6 +136,18 @@ _function:
 
 
 ; ************* FUNCTIONS ****************
+cleanBuffer:
+    ; rsi: buffer
+    cleanBuffer.while:
+        cmp byte[rsi],0
+        je cleanBuffer.end
+        mov byte[rsi],0
+        inc rsi
+        jmp cleanBuffer.while
+    cleanBuffer.end:
+        ret
+
+
 fwrite:
         mov rsi,anterior
         mov rdi,text
