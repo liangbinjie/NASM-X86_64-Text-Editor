@@ -7,6 +7,7 @@ section .bss
     anterior resb 4096
     despues resb 4096
     overwrite resb 4096
+    text resb 4096
     input resb 1
 
 section .text
@@ -50,7 +51,7 @@ _openFile:
     push rsi                        ; del buffer en la pila
 
 ReadLine:
-    call clearScreen
+    ; call clearScreen
     call printArchivo
     pop rsi                         ; obtiene el puntero
     push rsi                        ; guarda el puntero
@@ -64,18 +65,23 @@ ReadLine:
     pop rsi                         ; sacamos el puntero
     call strchr                     ; obtenemos el siguiente puntero/linea
     push rax                        ; lo guardamos en la pila
+
+    mov rsi,editarLinea
+    call writeString
+
+    mov rsi,overwrite
+    mov rdx,4095
+    call readInput
     
     mov rsi,input                   ; vemos que desea hacer el usuario
     mov rdx,1
-    mov rdi,0
-    mov rax,0
-    syscall
+    call readInput
 
     cmp byte[input],"e"
-    je ReadLine.edit
+    je ReadLine.save
 
-    cmp byte[input],"q"
-    je ReadLine.end 
+    cmp byte[input],0ah
+    jne ReadLine.end 
 
 
     cmp r12,[lineas]
@@ -91,19 +97,15 @@ ReadLine:
         xor r12,r12
         jmp ReadLine
 
-    ReadLine.edit:                  ; si es para editar
+    ReadLine.save:                  ; si es para editar
         pop rsi                     ; sacamos la direccion del puntero que habiamos guardado
         call guardarDespues         ; primero guardamos lo que hay despues de la linea seleccionada
         call guardarAnterior        ; luego guardamos lo anterior a la linea
-        mov rsi,overwrite           ; !!! AQUI le preguntamos al usuario que desea poner en la linea !!!
-        mov rax,0
-        mov rdi,0
-        mov rdx,4095
-        syscall
-
+        call fwrite
         ; agregar codigo para abrir archivo y escribir lo nuevo
 
-        jmp _openFile               ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
+        jmp _openFile                ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
+              
         
 
     ReadLine.end:
@@ -111,6 +113,10 @@ ReadLine:
         call writeString
         mov rsi,despues             ; imprime lo despues
         call writeString
+
+        mov rsi,overwrite
+        call writeString
+
         jmp _end
 
 _oneArg:
@@ -122,6 +128,71 @@ _function:
 
 
 ; ************* FUNCTIONS ****************
+fwrite:
+        mov rsi,anterior
+        mov rdi,text
+    fwrite.while.anterior:
+        ; store antes, overwrite y despues en text
+        cmp byte[rsi],0
+        je anterior.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[rdi],bl
+        inc rdi
+        inc rsi
+        jmp fwrite.while.anterior
+    
+        mov rsi,anterior
+        mov rdi,text
+    anterior.end:
+        mov rsi,overwrite
+    fwrite.while.overwrite:
+        ; store antes, overwrite y despues en text
+        cmp byte[rsi],0
+        je overwrite.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[rdi],bl
+        inc rdi
+        inc rsi
+        jmp fwrite.while.overwrite
+    overwrite.end:
+        mov rsi,despues
+    fwrite.while.despues:
+        ; store antes, overwrite y despues en text
+        cmp byte[rsi],0
+        je despues.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[rdi],bl
+        inc rdi
+        inc rsi
+        jmp fwrite.while.despues
+    despues.end:
+        mov rax,2
+        mov rdi,file
+        mov rsi,066o
+        mov rsi,1
+        syscall
+        push rax
+        push rax
+
+
+        mov rsi,text
+        call strLen
+        push rax
+
+        pop rdx
+        pop rdi
+        mov rsi,text
+        mov rax,1
+        syscall
+
+        pop rax
+        call fclose
+
+        ret
+
 delReturn:
     ; rsi: buffer
     push rbp
@@ -353,6 +424,7 @@ guardarAnterior:
 
 
 section .rodata
+    editarLinea db 0ah,"Editar linea: ",0
     archivoMsg db "Linea actual del archivo que se esta editando > ",0
     enter0ah db 0ah,0
     clearTerm db 27,"[H",27,"[2J"
