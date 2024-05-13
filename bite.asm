@@ -32,6 +32,9 @@ _end:
 
 ; ****************************************************************
 _noArg:
+    mov rsi,fileInput
+    call writeString
+
     mov rsi,file                    ; leemos el nombre
     mov rdx,99                      ; del archivo
     call readInput                  ; maximo 99 caracteres
@@ -40,14 +43,12 @@ _noArg:
     call delReturn                  ; delete file 0ah
 
 _openFile:
+    xor r12,r12
     mov rsi,buffer
     call cleanBuffer
-    mov rsi,despues
+    mov rsi,text
     call cleanBuffer
-    mov rsi,anterior
-    call cleanBuffer
-    mov rsi,overwrite
-    call cleanBuffer
+
     call openFile                   
     ; hasta aqui el archivo se abre en modo lectura y guarda todo lo del archivo en el buffer
     
@@ -60,6 +61,7 @@ _openFile:
 
 ReadLine:
     call clearScreen
+
     call printArchivo
     pop rsi                         ; obtiene el puntero
     push rsi                        ; guarda el puntero
@@ -74,18 +76,21 @@ ReadLine:
     call strchr                     ; obtenemos el siguiente puntero/linea
     push rax                        ; lo guardamos en la pila
 
-    mov rsi,editarLinea
-    call writeString
+    mov rsi,overwrite               ; limpiamos
+    call cleanBuffer                ; el buffer overwrite
 
-    mov rsi,overwrite
-    mov rdx,4095
-    call readInput
+    mov rsi,editarLinea             ; imprimir
+    call writeString                ; editar Linea msg
+
+    mov rsi,overwrite               ; leer la
+    mov rdx,4095                    ; nueva linea
+    call readInput                  ; que se va a editar
     
     mov rsi,input                   ; vemos que desea hacer el usuario
     mov rdx,1
     call readInput
 
-    cmp byte[input],"e"
+    cmp byte[input],"s"
     je ReadLine.save
 
     cmp byte[input],0ah
@@ -105,24 +110,26 @@ ReadLine:
         xor r12,r12
         jmp ReadLine
 
-    ReadLine.save:                  ; si es para editar
+    ReadLine.save:                  ; editamos el archivo
+
+        mov rsi,despues             ; limpiamos
+        call cleanBuffer            ; los buffers
+        mov rsi,anterior            ; anterior
+        call cleanBuffer            ; y despues
+
+
         pop rsi                     ; sacamos la direccion del puntero que habiamos guardado
         call guardarDespues         ; primero guardamos lo que hay despues de la linea seleccionada
         call guardarAnterior        ; luego guardamos lo anterior a la linea
-        call fwrite
-        ; agregar codigo para abrir archivo y escribir lo nuevo
+        call fwrite                 ; guardamos lo nuevo al archivo
+
+        mov rsi,text
+        call writeString
 
         jmp _openFile                ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
               
-        
-
     ReadLine.end:
-        mov rsi,anterior            ; imprime lo anterior
-        call writeString
-        mov rsi,despues             ; imprime lo despues
-        call writeString
-
-        mov rsi,overwrite
+        mov rsi,buffer              
         call writeString
 
         jmp _end
@@ -147,7 +154,6 @@ cleanBuffer:
     cleanBuffer.end:
         ret
 
-
 fwrite:
         mov rsi,anterior
         mov rdi,text
@@ -162,8 +168,6 @@ fwrite:
         inc rsi
         jmp fwrite.while.anterior
     
-        mov rsi,anterior
-        mov rdi,text
     anterior.end:
         mov rsi,overwrite
     fwrite.while.overwrite:
@@ -197,9 +201,9 @@ fwrite:
         push rax
         push rax
 
-
         mov rsi,text
         call strLen
+        inc rax
         push rax
 
         pop rdx
@@ -406,8 +410,8 @@ guardarDespues:
         xor rbx,rbx
         mov bl,byte[rsi]
         mov byte[despues+rcx],bl
-        inc rcx
         inc rsi
+        inc rcx
         jmp guardarDespues.while
     guardarDespues.end:
         mov rax,rcx
@@ -417,7 +421,10 @@ guardarDespues:
 guardarAnterior:
     ; r12 : receives number of lines
     push r12
+    cmp r12,0
+    je guardarAnterior.end
     dec r12
+    
     xor rcx,rcx
     mov rsi,buffer
     xor rdx,rdx
@@ -444,6 +451,7 @@ guardarAnterior:
 
 
 section .rodata
+    fileInput db "Ingrese el nombre de archivo: ",0
     editarLinea db 0ah,"Editar linea: ",0
     archivoMsg db "Linea actual del archivo que se esta editando > ",0
     enter0ah db 0ah,0
