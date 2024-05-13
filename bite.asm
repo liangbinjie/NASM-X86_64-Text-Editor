@@ -144,21 +144,26 @@ _oneArg:
     cmp rax,1
     je _displayFile
 
+    mov rsi,editPrefix
+    call cmpStr
+    cmp rax,1
+    je _editFile
+
     jmp _invalidPrefix
+
+_editFile:
+    pop rsi
+    call readFilenameCmdLine
+    jmp _openFile
 
 _displayFile:
     pop rsi
-    push rsi
-    call strLen
-
-    mov rdx,rax
-    pop rsi
-    call readFileName
+    call readFilenameCmdLine
 
     call openFile
 
     call clearScreen
-    
+
     mov rsi,buffer
     call writeString
     jmp _end
@@ -517,6 +522,15 @@ readFileName:
     readFileName.end:
         ret
 
+readFilenameCmdLine:
+    push rsi
+    call strLen
+
+    mov rdx,rax
+    pop rsi
+    call readFileName
+
+    ret
 
 
 section .rodata
