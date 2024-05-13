@@ -1,4 +1,4 @@
-name=main
+name=bite
 lib=lib
 macro=macros
 # Program to use as the assembler (you could use NASM or YASM for this makefile)
