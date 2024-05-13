@@ -9,6 +9,7 @@ section .bss
     overwrite resb 4096
     text resb 4096
     input resb 1
+    char resb 3
 
 section .text
     global _start
@@ -119,30 +120,47 @@ ReadLine:
         call guardarAnterior        ; luego guardamos lo anterior a la linea
         call fwrite                 ; guardamos lo nuevo al archivo
 
-        jmp _openFile                ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
+        jmp _openFile               ; volveriamos al inicio, abrimos el archivo nuevamente e iniciar el loop
               
     ReadLine.end:
         jmp _end
 
 _oneArg:
-    pop rax                 ; obtiene el nombre del programa
-    pop rdi                 ; obtiene el prefijo
-    mov rsi,helpPrefix      ; rsi recibe el prefijo de sistema
-    call cmpStr             ; comparamos si es igual a "-H"
-    cmp rax,1               ; si es igual
-    je _displayHelp         ; mostramos el mensaje de ayuda
+    pop rax                         ; obtiene el nombre del programa
+    pop rdi                         ; obtiene el prefijo
+    mov rsi,helpPrefix              ; rsi recibe el prefijo de sistema
+    call cmpStr                     ; comparamos si es igual a "-H"
+    cmp rax,1                       ; si es igual
+    je _displayHelp                 ; mostramos el mensaje de ayuda
 
-    mov rsi,readPrefix      ; si es para leer
+    mov rsi,readPrefix              ; si es para leer
     call cmpStr             
     cmp rax,1   
-    je _displayFile         ; imprimos el contenido
+    je _displayFile                 ; imprimos el contenido
 
-    mov rsi,editPrefix      ; si es para editar
+    mov rsi,editPrefix              ; si es para editar
     call cmpStr             
     cmp rax,1
-    je _editFile            ; solo vamos de vuelta
+    je _editFile                    ; solo vamos de vuelta
+
+    mov rsi,hexPrefix               ; si es para editar
+    call cmpStr             
+    cmp rax,1
+    je _viewHex                     ; solo vamos de vuelta
 
     jmp _invalidPrefix
+
+_viewHex:
+    pop rsi
+    call readFilenameCmdLine
+
+    call openFile
+
+    call clearScreen
+
+    mov rdi,buffer
+    call viewHex
+    jmp _end
 
 _editFile:
     pop rsi
@@ -155,7 +173,7 @@ _displayFile:
 
     call openFile
 
-    call clearScreen
+    ; call clearScreen
 
     mov rsi,buffer
     call writeString
@@ -526,6 +544,100 @@ readFilenameCmdLine:
 
     ret
 
+;*********************************************************************
+; int power()
+; 
+; Description:
+;   Devuelve el resultado de un exponente
+;
+; Arguments:
+;   R12: valor de la base
+;   RCX: valor del exponente
+; 
+; Returns:
+;   rax: retorna el resultado
+power:
+    cmp rcx,0
+    mov rax,1
+    jz power.esCero
+    power.ciclo:
+        cmp rcx,1
+        mov rbx,r12
+        jz power.end
+        mul rbx
+        dec rcx
+        jmp power.ciclo
+
+    power.end:
+        mul rbx
+        ret
+    power.esCero:
+        ret
+;*********************************************************************
+
+;*********************************************************************
+; void convertToASCII()
+; 
+; Description:
+;   Lee un numero en decimal y lo convierte en String
+;
+; Arguments:
+;   RSI: direccion de donde se almacenara el string
+;   R11: recibe el numero decimal
+;   R12: recibe la base a la que se quiere convertir
+;   RCX: recibe la cantidad de caracteres que almacenara 
+; 
+; Returns:
+;   rax: 0
+convertToASCII:   
+    cmp rax,0
+    je convertToASCII.end
+
+    mov rax,r11             ; RAX: es el dividendo
+    mov rdx,0               ; RDX: guarda el residuo
+    mov rbx,r12             ; RBX: es el divisor
+    div rbx                 ; RAX guardara el cociente
+    cmp dl,0ah              ; si el residuo es mayor que 10
+    jge convertToASCII.hex  ; usamos el sistema hex
+    jmp convertToASCII.nhex ; si no, decimal
+    convertToASCII.hex:             
+        add dl,37h              ; le sumamos 37h
+        jmp convertToASCII.continue 
+    convertToASCII.nhex:    
+        add dl,30h              ; le sumamos 30h
+    convertToASCII.continue:
+        mov [rsi+rcx],dl        ; lo metemos en la direccion
+        dec rcx                 ; va de atras hacia adelante
+        mov r11,rax             ; movemos el cociente a r11
+        jmp convertToASCII
+
+    convertToASCII.end:
+        ret
+;*********************************************************************
+
+viewHex:
+    ; rdi: buffer
+    viewHex.while:
+        cmp byte[rdi],0
+        je viewHex.end
+        mov rsi,char
+        mov r11,[rdi]
+        mov r12,16
+        mov rcx,1
+        call convertToASCII
+        inc rdi
+
+        push rdi
+        mov rsi,char
+        call writeString
+        pop rdi
+
+        jmp viewHex.while
+    viewHex.end:
+        ret
+
+
+    
 
 section .rodata
     opcionInvalidaMsg db "Funcion invalida, utilice --help para obtener ayuda",0ah,0
