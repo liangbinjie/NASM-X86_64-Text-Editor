@@ -1,8 +1,10 @@
 section .data
     lineas db 0
+    lineas2 db 0
 
 section .bss
     file resb 100
+    file2 resb 100
     buffer resb 4096
     anterior resb 4096
     despues resb 4096
@@ -10,6 +12,10 @@ section .bss
     text resb 4096
     input resb 1
     char resb 3
+    buffer2 resb 4096
+    diffBuffer resb 4096
+    linea1 resb 4096
+    linea2 resb 4096
 
 section .text
     global _start
@@ -18,6 +24,7 @@ _start:
     pop rax                         ; obtiene cantidad de argumentos
     
     cmp rax,1
+    mov r15,rax
     je _noArg
 
     cmp rax,2
@@ -93,7 +100,6 @@ ReadLine:
     cmp byte[input],0ah             ; diferente a "0ah" para salir
     jne ReadLine.end 
 
-
     cmp r12,[lineas]                ; comparamos si llegamos al final de
     je ReadLine.reset               ; lineas, para resetear el contador
     inc r12                         ; si no, aumentamos la linea actual
@@ -133,6 +139,9 @@ _oneArg:
     cmp rax,1                       ; si es igual
     je _displayHelp                 ; mostramos el mensaje de ayuda
 
+    cmp r15,2                       ; si no se ingreso nombre de archivo
+    je _invalidPrefix                         ; termina el programa
+
     mov rsi,readPrefix              ; si es para leer
     call cmpStr             
     cmp rax,1   
@@ -148,7 +157,111 @@ _oneArg:
     cmp rax,1
     je _viewHex                     ; solo vamos de vuelta
 
+    cmp r15,4
+    jne _invalidPrefix
+
+    mov rsi,diffPrefix              ; ver la diferencia
+    call cmpStr                     ; entre dos archivos
+    cmp rax,1                       ;
+    je _viewDiff                    ;
+
     jmp _invalidPrefix
+
+_viewDiff:
+    pop rdi
+    mov rsi,file2
+    call storeSecondFilename
+
+    mov rdi,file2
+    call fopen
+    push rax
+
+
+    mov rdi,rax
+    mov rsi,buffer2
+    call fread
+
+    mov rsi,buffer2                  ; contamos
+    call countLines                 ; cuantas lineas
+    mov [lineas2],rax                ; tiene el archivo
+
+    pop rdi
+    call fclose
+
+    pop rsi
+    call readFilenameCmdLine
+    call openFile
+
+    mov rsi,buffer                  ; contamos
+    call countLines                 ; cuantas lineas
+    mov [lineas2],rax                ; tiene el archivo
+
+    mov r9,[lineas]
+    mov r8,[lineas2]
+    cmp r8,r9
+    jge continue
+    mov r9,r8
+continue:
+    mov [lineas],r9
+    ; mov rsi,buffer
+    ; push rsi
+    ; *******************************
+_viewDiffLine:
+    ; call clearScreen                ; limpiamos la pantalla
+    ; pop rsi                         ; obtiene el puntero
+    ; push rsi                        ; guarda el puntero
+    ; call strLen0ah                  ; obtiene la cantidad de caracteres de la linea
+
+    ; mov rdx,rax                     ; rdx recibe la cantidad de caracteres
+    ; pop rsi                         ; sacamos el puntero
+    ; push rsi                        ; lo guardamos en la pila
+    ; call printf                     ; imprimimos la linea
+
+    ; pop rsi                         ; sacamos el puntero
+    ; call strchr                     ; obtenemos el siguiente puntero/linea
+    ; push rax                        ; lo guardamos en la pila
+    
+    ; mov rsi,input                   ; vemos que desea hacer el usuario
+    ; mov rdx,1                       ; si guardar
+    ; call readInput                  ; o salir
+    
+    ; cmp byte[input],0ah             ; diferente a "0ah" para salir
+    ; jne _viewDiffLine.end 
+
+
+    ; cmp r12,[lineas]                ; comparamos si llegamos al final de
+    ; je _viewDiffLine.end          ; lineas, para resetear el contador
+    ; inc r12                         ; si no, aumentamos la linea actual
+
+    ; jmp _viewDiffLine                    ; regresamos a readLine si no hay reset
+    xor rcx,rcx
+    xor rbx,rbx
+    mov rsi,buffer
+    mov rdi,buffer2
+    viewDiff.while:
+        mov bl,byte[rsi]
+        mov bh,byte[rdi]
+        inc rsi
+        inc rdi
+        cmp bl,0
+        je _viewDiffLine.end
+
+        cmp bh,0
+        je _viewDiffLine.end
+
+        cmp bl,bh
+        jne addDiff
+        jmp viewDiff.while
+
+    addDiff:
+        mov byte[diffBuffer+rcx],bl
+        inc rcx
+        jmp viewDiff.while
+
+    _viewDiffLine.end:
+        mov rsi,diffBuffer
+        call writeString
+        jmp _end
 
 _viewHex:
     pop rsi
@@ -190,8 +303,7 @@ _invalidPrefix:
     call writeString
     jmp _end
 
-_function:
-    jmp _end
+
 
 ; ************* FUNCTIONS ****************
 cleanBuffer:
@@ -544,18 +656,6 @@ readFilenameCmdLine:
 
     ret
 
-;*********************************************************************
-; int power()
-; 
-; Description:
-;   Devuelve el resultado de un exponente
-;
-; Arguments:
-;   R12: valor de la base
-;   RCX: valor del exponente
-; 
-; Returns:
-;   rax: retorna el resultado
 power:
     cmp rcx,0
     mov rax,1
@@ -573,22 +673,7 @@ power:
         ret
     power.esCero:
         ret
-;*********************************************************************
 
-;*********************************************************************
-; void convertToASCII()
-; 
-; Description:
-;   Lee un numero en decimal y lo convierte en String
-;
-; Arguments:
-;   RSI: direccion de donde se almacenara el string
-;   R11: recibe el numero decimal
-;   R12: recibe la base a la que se quiere convertir
-;   RCX: recibe la cantidad de caracteres que almacenara 
-; 
-; Returns:
-;   rax: 0
 convertToASCII:   
     cmp rax,0
     je convertToASCII.end
@@ -613,7 +698,6 @@ convertToASCII:
 
     convertToASCII.end:
         ret
-;*********************************************************************
 
 viewHex:
     ; rdi: buffer
@@ -636,7 +720,22 @@ viewHex:
     viewHex.end:
         ret
 
-
+storeSecondFilename:
+    ; rsi: second file buffer
+    ; rdi: first filename
+    storeSecondFilename.while:
+        cmp byte[rdi],0
+        je storeSecondFilename.end
+        xor rbx,rbx
+        mov bl,byte[rdi]
+        mov byte[rsi],bl
+        inc rdi
+        inc rsi
+        jmp storeSecondFilename.while
+    storeSecondFilename.end:
+        mov rsi,file
+        call cleanBuffer
+        ret
     
 
 section .rodata
