@@ -1,21 +1,19 @@
 section .data
-    lineas db 0
-    lineas2 db 0
 
 section .bss
-    file resb 100
-    file2 resb 100
-    buffer resb 4096
-    anterior resb 4096
-    despues resb 4096
-    overwrite resb 4096
-    text resb 4096
-    input resb 1
-    char resb 3
-    buffer2 resb 4096
-    diffBuffer resb 4096
-    linea1 resb 4096
-    linea2 resb 4096
+    file resb 100                   ; buffer para almacenar el nombre de archivo1
+    file2 resb 100                  ; buffer para almacenar el nombre de archivo2
+    buffer resb 4096                ; buffer para almacenar el contenido de archivo
+    anterior resb 4096              ; buffer para almacenar el contenido anterior a la linea actual
+    despues resb 4096               ; buffer para almacenar el contenido despues de la linea actual
+    overwrite resb 4096             ; buffer para almacenar la linea actual
+    text resb 4096                  ; buffer para almacenar el contenido nuevo
+    input resb 1                    
+    char resb 3                     ; buffer para imprimir caracter hexadecimal
+    buffer2 resb 4096               ; buffer para almacenar el contenido del archivo2
+    diffBuffer resb 4096            ; buffer para almacenar la diferencia entre archivos
+    linea1 resb 4096                ; buffer para la linea actual del buffer1
+    linea2 resb 4096                ; buffer para la linea actual del buffer2
 
 section .text
     global _start
@@ -23,12 +21,12 @@ section .text
 _start:
     pop rax                         ; obtiene cantidad de argumentos
     
-    cmp rax,1
-    mov r15,rax
-    je _noArg
+    cmp rax,1                       ; aqui vemos si ingreso
+    mov r15,rax                     ; un parametro de funcion
+    je _noArg                       ; si no, vamos a preguntarle el nombre de archivo
 
-    cmp rax,2
-    jge _oneArg
+    cmp rax,2                       ; Si ingreso parametros de funcion
+    jge _oneArg                     ; en la consola, vamos a ver cual opcion
 
 _end:
     mov rax,60
@@ -120,7 +118,6 @@ ReadLine:
         mov rsi,anterior            ; anterior
         call cleanBuffer            ; y despues
 
-
         pop rsi                     ; sacamos la direccion del puntero que habiamos guardado
         call guardarDespues         ; primero guardamos lo que hay despues de la linea seleccionada
         call guardarAnterior        ; luego guardamos lo anterior a la linea
@@ -168,110 +165,97 @@ _oneArg:
     jmp _invalidPrefix
 
 _viewDiff:
-    pop rdi
-    mov rsi,file2
-    call storeSecondFilename
+    pop rdi                         ; sacamos del stack el nombre del archivo1
+    mov rsi,file2                   ; se lo asignamos a la memoria file2
+    call storeSecondFilename        ; y guardamos el nombre en la memoria
 
-    mov rdi,file2
-    call fopen
-    push rax
+    mov rdi,file2                   ; abrimos el 
+    call fopen                      ; archivo
+    push rax                        ; metemos el fd al stack
 
+    mov rdi,rax                     ; utilizando el fd
+    mov rsi,buffer2                 ; leemos los datos
+    call fread                      ; del archivo y lo guardamos en el buffer2
 
-    mov rdi,rax
-    mov rsi,buffer2
-    call fread
+    pop rdi                         ; sacamos el fd de la pila
+    call fclose                     ; cerramos el archivo
 
-    mov rsi,buffer2                  ; contamos
-    call countLines                 ; cuantas lineas
-    mov [lineas2],rax                ; tiene el archivo
+    pop rsi                         ; sacamos el nombre del segundo archivo
+    call readFilenameCmdLine        ; utilizamos la funcion para asignarle el nombre a file
+    call openFile                   ; abrimos el archivo y lo guardamos en buffer
 
-    pop rdi
-    call fclose
-
-    pop rsi
-    call readFilenameCmdLine
-    call openFile
-
-    mov rsi,buffer                  ; contamos
-    call countLines                 ; cuantas lineas
-    mov [lineas2],rax                ; tiene el archivo
-
-
-    mov rsi,buffer
-    mov rdi,buffer2
-    push rsi
-    push rdi
+    mov rsi,buffer                  ; guardamos
+    mov rdi,buffer2                 ; rsi y rdi
+    push rsi                        ; en el stack para
+    push rdi                        ; ver la diferencia entre ambos buffers
 _viewDiffLine:
-    mov rsi,diffBuffer
-    call cleanBuffer
+    mov rsi,diffBuffer              ; limpiamos el buffer
+    call cleanBuffer                ; de diferencia
 
-    mov rsi,linea1
-    call cleanBuffer
+    mov rsi,linea1                  ; limpiamos el buffer
+    call cleanBuffer                ; linea1
 
-    mov rsi,linea2
-    call cleanBuffer
-    pop rdi
-    call storeLine1
+    mov rsi,linea2                  ; limpiamos el buffer
+    call cleanBuffer                ; linea2
+    pop rdi                         ; sacamos el puntero de la buffer2
+    call storeLine1                 ; guardamos la linea actual del buffer2
     ;rax tiene el siguiente puntero del buffer2
-    mov rdi,rax
+    mov rdi,rax                     ; guardamos el nuevo puntero de la siguiente linea en rdi
     
-    pop rsi
-    push rdi                ; guardamos RDI (siguiente puntero de buffer2)
-    call storeLine2
+    pop rsi                         ; sacamos el puntero del buffer1
+    push rdi                        ; guardamos RDI (siguiente puntero de buffer2)
+    call storeLine2                 ; y almacenamos la linea actual del buffer1
     ;rax tiene el siguietne puntero del buffer1
-    mov rsi,rax
+    mov rsi,rax                     ; movemos el siguiente puntero de la linea a rsi
     
-    push rsi                ; guardamos RSI (siguiente puntero de buffer1)
+    push rsi                        ; guardamos RSI (siguiente puntero de buffer1)
     
-    call compareLines
+    call compareLines               ; comparamos ambas lineas
 
-    mov rsi,diffBuffer
-    call writeString
+    mov rsi,diffBuffer              ; imprimos
+    call writeString                ; la diferencia
 
-    mov rsi,input
+    mov rsi,input                   ; obtenemos el input del usuario
     mov rdx,1
     call readInput
 
-    cmp byte[input],0ah
-    jne _end
+    cmp byte[input],0ah             ; si es diferente a ENTER
+    jne _end                        ; termina el programa
 
     jmp _viewDiffLine
 
-
-
-
 _viewHex:
-    pop rsi
-    call readFilenameCmdLine
+    pop rsi                         ; sacamos el nombre de archivo
+    call readFilenameCmdLine        ; mediante la funcion
 
-    call openFile
+    call openFile                   ; abrimos el archivo y lo almacenamos al buffer
 
-    call clearScreen
+    call clearScreen                ; limpiamos la pantalla
 
-    mov rdi,buffer
-    call viewHex
+    mov rdi,buffer                  ; utilizando el buffer
+    call viewHex                    ; leemos en formato hexadecimal cada byte
     jmp _end
 
 _editFile:
-    pop rsi
-    call readFilenameCmdLine
-    jmp _openFile
+    pop rsi                         ; sacamos el nombre de archivo
+    call readFilenameCmdLine        ; leemos el nombre de archivo
+    jmp _openFile                   ; y saltamos hacia arriba
 
 _displayFile:
-    pop rsi
-    call readFilenameCmdLine
+    pop rsi                         ; sacamos el nombre de archivo
+    call readFilenameCmdLine        ; leemos el nombre de archivo
 
-    call openFile
+    call openFile                   ; abrimos el archivo
 
-    ; call clearScreen
-
-    mov rsi,buffer
+    call clearScreen                ; limpiamos
+    
+    mov rsi,buffer                  ; mostramos el contenido del buffer
     call writeString
     jmp _end
 
 _displayHelp:
-    mov rsi,helpMsg
-    call writeString
+    mov rsi,helpMsg                 ; mostramos el manual
+    call writeString                ; de usuario/ayuda
     jmp _end
 
 _invalidPrefix:
@@ -280,10 +264,10 @@ _invalidPrefix:
     call writeString
     jmp _end
 
-
-
 ; ************* FUNCTIONS ****************
 compareLines:
+    ; funcion que compara la linea actual del archivo 2
+    ; respecto a la linea actual del archivo 1
     mov rsi,linea1
     mov rdi,linea2
     xor rcx,rcx
@@ -301,14 +285,15 @@ compareLines:
 
         jmp compareLines.while
     compareLines.addChar:
-        mov byte[diffBuffer+rcx],bl
+        mov byte[diffBuffer+rcx],bl     ; agregamos lo que tiene diferente en el archivo 2 al buffer
         inc rcx
         jmp compareLines.while
     compareLines.end:
         ret
 
 storeLine1:
-    ; rdi: buffer2
+    ; funcion que almacena la linea actual del buffer 1
+    ; rdi: buffer1
     mov rsi,linea1
     call cleanBuffer
     xor rcx,rcx
@@ -329,7 +314,8 @@ storeLine1:
         ret                 ; retorna el siguiente puntero del buffer2
         
 storeLine2:
-    ; rdi: buffer2
+    ; funcion que almacena la linea actual del buffer2
+    ; rsi: buffer2
     push rsi
     mov rsi,linea2
     call cleanBuffer
@@ -352,6 +338,7 @@ storeLine2:
         ret                 ; retorna el siguiente puntero del buffer2
 
 cleanBuffer:
+    ; funcion que limpia un buffer recibido desde el rsi
     ; rsi: buffer
     cleanBuffer.while:
         cmp byte[rsi],0
@@ -363,6 +350,8 @@ cleanBuffer:
         ret
 
 fwrite:
+    ; esta funcion guarda la linea actual, mas lo anterior y despues de la linea
+    ; en el buffer text
         mov rsi,anterior
         mov rdi,text
     fwrite.while.anterior:
@@ -426,6 +415,7 @@ fwrite:
         ret
 
 delReturn:
+    ; funcion cuyo proposito es eliminar el 0ah del nombre de archivo
     ; rsi: buffer
     push rbp
     delReturn.while:
@@ -443,6 +433,9 @@ delReturn:
         ret
 
 writeString:
+    ; imprime un string utilizando strlen.
+    ; no es necesario indicar cuantos caracteres sera
+    ; simplemente recibe un string en rsi
     ; rsi: buffer
     push rbp
     push rsi
@@ -456,6 +449,7 @@ writeString:
     ret
 
 strLen:
+    ; obtiene el largo de un string, hasta llegar a 0 (null terminator)
     ;rsi: buffer
     push rbp
     xor rcx,rcx
@@ -471,6 +465,8 @@ strLen:
         ret
 
 readInput:
+    ; lee un input. recibe en rsi el lugar donde se almacena
+    ; y en rdx la cantidad de datos que almacenara
     ; rsi: buffer
     ; rdx: size
     push rbp
@@ -481,6 +477,7 @@ readInput:
     ret
 
 fopen:
+    ; funcion cuyo proposito es abrir el archivo
     ; rdi: filename
     push rbp
     mov rax,2
@@ -491,8 +488,9 @@ fopen:
     ret
 
 fread:
+    ; funcion que lee un archivo
     ;rdi: fd
-    ;rsi: buffer
+    ;rsi: buffer donde almacenara el contenido leido
     push rbp
     mov rax,0
     mov rdx,4095
@@ -501,6 +499,7 @@ fread:
     ret
 
 fclose:
+    ; cierra un archivo
     ;rdi: fd
     push rbp
     mov rax,3
@@ -509,6 +508,8 @@ fclose:
     ret
 
 strchr:
+    ; funcion cuyo proposito es devolver el puntero de un caracter especifico
+    ; para esta funcion la modificamos a exclusivamente 0ah o 0
     ; sil: caracter a buscar (en este caso 0ah)
     ; rsi: buffer
     push rbp
@@ -526,6 +527,7 @@ strchr:
         ret
 
 strLen0ah:
+    ; funcion que retorna el largo de un string cuando encuentre un 0ah
     ; rsi: buffer
     push rbp
     xor rcx,rcx
@@ -543,6 +545,8 @@ strLen0ah:
         ret
 
 printf:
+    ; funcion para imprimir un string
+    ; con largo definido
     ;rdx: size
     ;rsi: buffer
     push rbp
@@ -553,6 +557,8 @@ printf:
     ret
 
 countLines:
+    ; funcion para contar las lineas que tiene el archivo
+    ; rsi: buffer
     push rbp
     xor rcx,rcx
     countLines.while:
@@ -573,6 +579,7 @@ countLines:
         ret
 
 clearScreen:
+    ; funcion para limpiar la pantalla
     mov rsi,clearTerm
     mov rdx,clearLen
     mov rax,1
@@ -581,6 +588,7 @@ clearScreen:
     ret
 
 openFile:
+    ; funcion general para abrir archivo, hacer lectura y cerrar
     push rbp
     mov rdi,file            ; rdi recibe el
     call fopen              ; puntero del nombre de archivo
@@ -610,6 +618,7 @@ printArchivo:
     ret
 
 guardarDespues:
+    ; guardamos el contenido despues de la linea actual
     ; rsi: puntero
     push rbp
     xor rcx,rcx
@@ -628,6 +637,7 @@ guardarDespues:
         ret
         
 guardarAnterior:
+    ; funcion para guardar el contenido anterior a la linea actual
     ; r12 : receives number of lines
     push r12
     cmp r12,0
@@ -658,6 +668,7 @@ guardarAnterior:
         ret
 
 cmpStr:
+    ; compara strings entre rdi y rsi
     xor rcx,rcx
     xor rbx,rbx
     cmpStr.while:
@@ -676,6 +687,8 @@ cmpStr:
         ret
 
 readFileName:
+    ; lee desde rsi el nombre de un archivo para guardarlo
+    ; en memoria file. Tiene que saber la longitud
     ; rsi: fileName
     ; rdx: filename length
     xor rcx,rcx
@@ -692,6 +705,9 @@ readFileName:
         ret
 
 readFilenameCmdLine:
+    ; usando la funcion readFileName, leemos y guardamos el
+    ; nombre de archivo obtenido de la consola
+    ; rsi recibe el nombre
     push rsi
     call strLen
 
@@ -702,6 +718,7 @@ readFilenameCmdLine:
     ret
 
 power:
+    ; funcion de exponente
     cmp rcx,0
     mov rax,1
     jz power.esCero
@@ -719,7 +736,8 @@ power:
     power.esCero:
         ret
 
-convertToASCII:   
+convertToASCII:  
+    ; funcion itoa
     cmp rax,0
     je convertToASCII.end
 
@@ -745,6 +763,7 @@ convertToASCII:
         ret
 
 viewHex:
+    ; funcion que imprime byte en byte el valor hexadecimal
     ; rdi: buffer
     viewHex.while:
         cmp byte[rdi],0
@@ -766,6 +785,7 @@ viewHex:
         ret
 
 storeSecondFilename:
+    ; funcion que guarda el nombre del segundo archivo
     ; rsi: second file buffer
     ; rdi: first filename
     storeSecondFilename.while:
@@ -793,7 +813,7 @@ section .rodata
             db "-h <nombreArchivo>                   > Lee un archivo en hexadecimal",0ah,
             db "-d <nombreArchivo1> <nombreArchivo2> > Muestra linea por linea la diferencia que tiene el archivo 2 respecto al archivo 1",0ah,0
     errorArchivoMsg db "Error al abrir archivo",0ah,0
-    fileInput db "Ingrese el nombre de archivo: ",0
+    fileInput db "Ingrese el nombre de archivo que desea abrir para editar: ",0
     editarLinea db 0ah,"Editar linea: ",0
     archivoMsg db "Linea actual del archivo que se esta editando > ",0
     enter0ah db 0ah,0
