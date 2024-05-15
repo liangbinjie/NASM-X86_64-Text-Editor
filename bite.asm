@@ -196,72 +196,49 @@ _viewDiff:
     call countLines                 ; cuantas lineas
     mov [lineas2],rax                ; tiene el archivo
 
-    mov r9,[lineas]
-    mov r8,[lineas2]
-    cmp r8,r9
-    jge continue
-    mov r9,r8
-continue:
-    mov [lineas],r9
-    ; mov rsi,buffer
-    ; push rsi
-    ; *******************************
-_viewDiffLine:
-    ; call clearScreen                ; limpiamos la pantalla
-    ; pop rsi                         ; obtiene el puntero
-    ; push rsi                        ; guarda el puntero
-    ; call strLen0ah                  ; obtiene la cantidad de caracteres de la linea
 
-    ; mov rdx,rax                     ; rdx recibe la cantidad de caracteres
-    ; pop rsi                         ; sacamos el puntero
-    ; push rsi                        ; lo guardamos en la pila
-    ; call printf                     ; imprimimos la linea
-
-    ; pop rsi                         ; sacamos el puntero
-    ; call strchr                     ; obtenemos el siguiente puntero/linea
-    ; push rax                        ; lo guardamos en la pila
-    
-    ; mov rsi,input                   ; vemos que desea hacer el usuario
-    ; mov rdx,1                       ; si guardar
-    ; call readInput                  ; o salir
-    
-    ; cmp byte[input],0ah             ; diferente a "0ah" para salir
-    ; jne _viewDiffLine.end 
-
-
-    ; cmp r12,[lineas]                ; comparamos si llegamos al final de
-    ; je _viewDiffLine.end          ; lineas, para resetear el contador
-    ; inc r12                         ; si no, aumentamos la linea actual
-
-    ; jmp _viewDiffLine                    ; regresamos a readLine si no hay reset
-    xor rcx,rcx
-    xor rbx,rbx
     mov rsi,buffer
     mov rdi,buffer2
-    viewDiff.while:
-        mov bl,byte[rsi]
-        mov bh,byte[rdi]
-        inc rsi
-        inc rdi
-        cmp bl,0
-        je _viewDiffLine.end
+    push rsi
+    push rdi
+_viewDiffLine:
+    mov rsi,diffBuffer
+    call cleanBuffer
 
-        cmp bh,0
-        je _viewDiffLine.end
+    mov rsi,linea1
+    call cleanBuffer
 
-        cmp bl,bh
-        jne addDiff
-        jmp viewDiff.while
+    mov rsi,linea2
+    call cleanBuffer
+    pop rdi
+    call storeLine1
+    ;rax tiene el siguiente puntero del buffer2
+    mov rdi,rax
+    
+    pop rsi
+    push rdi                ; guardamos RDI (siguiente puntero de buffer2)
+    call storeLine2
+    ;rax tiene el siguietne puntero del buffer1
+    mov rsi,rax
+    
+    push rsi                ; guardamos RSI (siguiente puntero de buffer1)
+    
+    call compareLines
 
-    addDiff:
-        mov byte[diffBuffer+rcx],bl
-        inc rcx
-        jmp viewDiff.while
+    mov rsi,diffBuffer
+    call writeString
 
-    _viewDiffLine.end:
-        mov rsi,diffBuffer
-        call writeString
-        jmp _end
+    mov rsi,input
+    mov rdx,1
+    call readInput
+
+    cmp byte[input],0ah
+    jne _end
+
+    jmp _viewDiffLine
+
+
+
 
 _viewHex:
     pop rsi
@@ -306,6 +283,74 @@ _invalidPrefix:
 
 
 ; ************* FUNCTIONS ****************
+compareLines:
+    mov rsi,linea1
+    mov rdi,linea2
+    xor rcx,rcx
+    compareLines.while:
+        mov bl,byte[rsi]
+        mov bh,byte[rdi]
+        inc rdi
+        inc rsi
+        cmp bl,0
+        je compareLines.end
+        cmp bh,0
+        je compareLines.end
+        cmp bh,bl
+        jne compareLines.addChar
+
+        jmp compareLines.while
+    compareLines.addChar:
+        mov byte[diffBuffer+rcx],bl
+        inc rcx
+        jmp compareLines.while
+    compareLines.end:
+        ret
+
+storeLine1:
+    ; rdi: buffer2
+    mov rsi,linea1
+    call cleanBuffer
+    xor rcx,rcx
+    storeLine1.while:
+        cmp byte[rdi],0ah
+        je storeLine1.end
+        cmp byte[rdi],0
+        je storeLine1.end
+        xor rbx,rbx
+        mov bl,byte[rdi]
+        mov byte[linea1+rcx],bl
+        inc rcx
+        inc rdi
+        jmp storeLine1.while
+    storeLine1.end:
+        inc rdi
+        mov rax,rdi
+        ret                 ; retorna el siguiente puntero del buffer2
+        
+storeLine2:
+    ; rdi: buffer2
+    push rsi
+    mov rsi,linea2
+    call cleanBuffer
+    pop rsi
+    xor rcx,rcx
+    storeLine2.while:
+        cmp byte[rsi],0ah
+        je storeLine2.end
+        cmp byte[rsi],0
+        je storeLine2.end
+        xor rbx,rbx
+        mov bl,byte[rsi]
+        mov byte[linea2+rcx],bl
+        inc rcx
+        inc rsi
+        jmp storeLine2.while
+    storeLine2.end:
+        inc rsi
+        mov rax,rsi
+        ret                 ; retorna el siguiente puntero del buffer2
+
 cleanBuffer:
     ; rsi: buffer
     cleanBuffer.while:
@@ -746,7 +791,7 @@ section .rodata
             db "-r <nombreArchivo>                   > Lee un archivo",0ah
             db "-e <nombreArchivo>                   > Edita un archivo",0ah
             db "-h <nombreArchivo>                   > Lee un archivo en hexadecimal",0ah,
-            db "-d <nombreArchivo1> <nombreArchivo2> > Muestra la diferencia entre dos archivos",0ah,0
+            db "-d <nombreArchivo1> <nombreArchivo2> > Muestra linea por linea la diferencia que tiene el archivo 2 respecto al archivo 1",0ah,0
     errorArchivoMsg db "Error al abrir archivo",0ah,0
     fileInput db "Ingrese el nombre de archivo: ",0
     editarLinea db 0ah,"Editar linea: ",0
