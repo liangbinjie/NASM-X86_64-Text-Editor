@@ -601,8 +601,6 @@ openFile:
     call fopen              ; puntero del nombre de archivo
     push rax                ; save fd
     push rax
-    push rsi
-    push rdx
 
     ; mov rdi,rax             ; vemos
     ; mov rax,8               ; el tamano
@@ -612,8 +610,6 @@ openFile:
 
     ; mov [fileSize],rax
 
-    pop rdx
-    pop rsi
     pop rdi                 ; lee el archivo
     mov rsi,buffer          ; para guardarlo
     call fread              ; en el buffer
