@@ -1,6 +1,5 @@
 section .data
     lineas db 0
-    fileSize dq 0
 
 section .bss
     file resb 100                   ; buffer para almacenar el nombre de archivo1
@@ -16,7 +15,6 @@ section .bss
     diffBuffer resb 4096            ; buffer para almacenar la diferencia entre archivos
     linea1 resb 4096                ; buffer para la linea actual del buffer1
     linea2 resb 4096                ; buffer para la linea actual del buffer2
-    num resb 21
 
 section .text
     global _start
