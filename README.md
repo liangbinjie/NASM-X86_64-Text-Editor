@@ -15,6 +15,7 @@ Terminal based Text Editor written in Nasm x86_64 Assembly
 `./bite -h <nombreArchivo>` Lee un archivo en formato hexadecimal
 
 `./bite -d <nombreArchivo1> <nombreArchivo2>` Muestra la diferencia linea por linea de los archivos ingresados
+
 ---
 
 ### ./bite
