@@ -1,4 +1,6 @@
 section .data
+    lineas db 0
+    fileSize dq 0
 
 section .bss
     file resb 100                   ; buffer para almacenar el nombre de archivo1
@@ -14,6 +16,7 @@ section .bss
     diffBuffer resb 4096            ; buffer para almacenar la diferencia entre archivos
     linea1 resb 4096                ; buffer para la linea actual del buffer1
     linea2 resb 4096                ; buffer para la linea actual del buffer2
+    num resb 21
 
 section .text
     global _start
@@ -27,6 +30,10 @@ _start:
 
     cmp rax,2                       ; Si ingreso parametros de funcion
     jge _oneArg                     ; en la consola, vamos a ver cual opcion
+
+_unSupported:
+    mov rsi,unSupportMsg
+    call writeString
 
 _end:
     mov rax,60
@@ -264,7 +271,7 @@ _invalidPrefix:
     call writeString
     jmp _end
 
-; ************* FUNCTIONS ****************
+; ************* FUNCTIONS ****************    
 compareLines:
     ; funcion que compara la linea actual del archivo 2
     ; respecto a la linea actual del archivo 1
@@ -593,8 +600,21 @@ openFile:
     mov rdi,file            ; rdi recibe el
     call fopen              ; puntero del nombre de archivo
     push rax                ; save fd
+    push rax
+    push rsi
+    push rdx
 
-    mov rdi, rax            ; lee el archivo
+    ; mov rdi,rax             ; vemos
+    ; mov rax,8               ; el tamano
+    ; mov rsi,0               ; del archivo
+    ; mov rdx,2               ;
+    ; syscall
+
+    ; mov [fileSize],rax
+
+    pop rdx
+    pop rsi
+    pop rdi                 ; lee el archivo
     mov rsi,buffer          ; para guardarlo
     call fread              ; en el buffer
 
@@ -804,6 +824,7 @@ storeSecondFilename:
     
 
 section .rodata
+    unSupportMsg db "Tamano de archivo no soportado",0ah,0
     opcionInvalidaMsg db "Funcion invalida, utilice --help para obtener ayuda",0ah,0
     helpMsg db 0ah,"Manual de ayuda",0ah
             db "----------------------------------------------------------------------------------------",0ah
