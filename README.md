@@ -1,6 +1,13 @@
-# NASM-X86_64-Text-Editor
+# BITE | NASM-X86_64-Text-Editor
 Terminal based Text Editor written in Nasm x86_64 Assembly
 
+
+## Instalacion
+
+Despues de haber descargado todos los archivos (`makefile`, `bite.asm`, `lib.asm`) ejecutar la funcion `make` en la consola para crear los archivos ejecutables.
+Leer <a name="restriccion"> Seccion Restriccion</a>
+
+---
 
 ## Manual de Uso
 
@@ -85,7 +92,7 @@ foo@bar:~$ (ENTER)
 
 ---
 
-## Restrictions
+## [Restricciones](#restriccion)
 
 - Los archivos deben estar en el mismo directorio.
 - Los archivos no deben sobrepasar 4kb, si lo hace, solo mostrará los primeros bytes.
