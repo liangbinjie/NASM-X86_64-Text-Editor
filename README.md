@@ -14,8 +14,7 @@ Terminal based Text Editor written in Nasm x86_64 Assembly
 
 `./bite -h <nombreArchivo>` Lee un archivo en formato hexadecimal
 
-`./bite -d <nombreArchivo1> <nombreArchivo2>` Muestra la diferencia linea por linea del archivo2 respecto al archivo1
-
+`./bite -d <nombreArchivo1> <nombreArchivo2>` Muestra la diferencia linea por linea de los archivos ingresados
 ---
 
 ### ./bite
@@ -44,7 +43,7 @@ foo@bar:~$ Input [ENTER (siguiente linea) / s (guardar) / otro (salir)]:
 
 ./bite -h <nombreArchivo> Lee un archivo en formato hexadecimal
 
-./bite -d <nombreArchivo1> <nombreArchivo2> Muestra la diferencia linea por linea del archivo2 respecto al archivo1
+./bite -d <nombreArchivo1> <nombreArchivo2> Muestra la diferencia linea por linea de los archivos ingresados
 ```
 
 ---
@@ -82,6 +81,16 @@ foo@bar:~$ Input [ENTER (siguiente linea) / s (guardar) / otro (salir)]:
 -> printLine
 foo@bar:~$ (ENTER)
 ```
+
+---
+
+## Restrictions
+
+- Los archivos deben estar en el mismo directorio.
+- Los archivos no deben sobrepasar 4kb, si lo hace, solo mostrará los primeros bytes.
+- Los archivos deben estar previamente creados.
+
+---
 
 ## Flow Diagram
 ```mermaid
